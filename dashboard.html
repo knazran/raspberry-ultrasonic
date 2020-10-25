@@ -17,6 +17,7 @@
 <script>
 // Create a client instance
 client = new Paho.MQTT.Client("192.168.0.110", 9001, "123");
+const DISTANCE_TO_WALL = 490
 
 // set callback handlers
 client.onConnectionLost = onConnectionLost;
@@ -66,6 +67,8 @@ var data = [];
 var visits = 10;
 var i = 0;
 var recent_data;
+var humans_passing_me = 0
+var is_passing = false
 
 data.push({ date: Date.now(), value: 0 });
 
@@ -100,6 +103,10 @@ series.interpolationDuration = 500;
 series.defaultState.transitionDuration = 0;
 series.tensionX = 0.8;
 
+var range = valueAxis.createSeriesRange(series);
+range.value = 0;
+range.endValue = 140;
+
 chart.events.on("datavalidated", function () {
     dateAxis.zoom({ start: 1 / 15, end: 1.2 }, false, true);
 });
@@ -111,10 +118,20 @@ dateAxis.rangeChangeDuration = 500;
 document.addEventListener("new_data", function(e) {
     console.log('new_data',e)
     console.log(e.detail);
-    if (chart.data.length > 60){
+    if (chart.data.length > 120){
         chart.addData(e.detail, 1);
     } else {
         chart.addData(e.detail, 0);
+    }
+
+    if (e.detail.value < DISTANCE_TO_WALL){
+        if (!is_passing) {
+            humans_passing_me += 1
+            document.getElementById('number-people').textContent = humans_passing_me
+            is_passing = true
+        }
+    } else {
+        is_passing = false
     }
 }, false);
 
@@ -170,4 +187,12 @@ series.events.on("validated", function() {
 </script>
 
 <!-- HTML -->
-<div id="chartdiv"></div>
+<div class='container mx-auto p-10 w-full'>
+    <h4 class='text-center text-xl font-semibold my-8'>Ultrasonic Sensor Dashboard</h4>
+    <div id="chartdiv" class='w-2/3 border'></div>
+    <div class='my-8 text-center p-12 bg-blue-200 rounded-md font-grey-800'>
+        <p class='text-lg'>Number of Times People Passed Through:</p> 
+        <p class='text-2xl font-bold' id='number-people' class=''>0</p>
+    </div>
+    
+</div>
